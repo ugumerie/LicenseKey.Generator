@@ -1,4 +1,4 @@
-﻿using LicenseKey.Generator.App.LicenseKeyGenerator;
+﻿using LicenseKey.Generator.LicenseKeyGenerator;
 
 Console.WriteLine("=== License Key Generator Started ===");
 Console.WriteLine();
