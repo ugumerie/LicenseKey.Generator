@@ -5,24 +5,32 @@ This project is a .NET console application that generates an ECDSA key pair for 
 The app:
 
 - Creates a new ECDSA key pair using the NIST P-256 curve
-- Exports the private key in Base64 format for signing licenses
-- Exports the public key in Base64 format for verifying licenses
-- Writes both keys to disk in an `license_output` folder
-- Demonstrates signing sample license data and verifying the signature
+- Prints the private key as PEM to stdout so you can copy it directly into a secret manager
+- Prints the public key as PEM for use in applications that verify licenses
+- Demonstrates signing sample license data and verifying the signature with `ImportFromPem`
 
-## What It Generates
+## Security Model
 
-When the app runs, it creates these files:
+The private key must never be written to disk.
 
-- `license_output/license_private.key`
-- `license_output/license_public.key`
+Recommended flow:
 
-The output folder is created relative to the executable location by using `AppContext.BaseDirectory`.
+1. Run this tool locally one time.
+2. Copy the private key PEM from the terminal.
+3. Paste that PEM value into your secret manager or environment configuration.
+4. Keep only the public key in the application that verifies licenses.
 
-That means:
+This avoids the common failure mode where a private key is left in a repository, build artifact, container image, or compromised host filesystem.
 
-- When running with `dotnet run`, the files are written under the build output folder, typically `bin/Debug/net10.0/license_output`
-- When running a published build, the files are written under the published app folder in `license_output`
+## What It Outputs
+
+When the app runs, it prints:
+
+- A private key PEM block for signing
+- A public key PEM block for verification
+- Sample signing and verification output
+
+No key files are created.
 
 ## Requirements
 
@@ -47,6 +55,20 @@ From the project root:
 ```bash
 dotnet run
 ```
+
+To force plain, uncolored output:
+
+```bash
+dotnet run -- --no-color
+```
+
+After it prints the PEM blocks:
+
+1. Copy the private key PEM into your secret store.
+2. Copy the public key PEM into the application that verifies licenses.
+3. Do not redirect the output into files containing private key material.
+
+Color output is also disabled automatically when stdout is redirected or piped.
 
 ## Publish And Run On macOS
 
@@ -174,20 +196,36 @@ Run it with:
 ./LicenseKey.Generator
 ```
 
+## Runtime Usage
+
+At runtime, load the private key from configuration or a secret manager and import it directly from PEM.
+
+```csharp
+string pem = Environment.GetEnvironmentVariable("LICENCE_PRIVATE_KEY")!
+ .Replace("\\n", "\n");
+
+using var ecdsa = ECDsa.Create();
+ecdsa.ImportFromPem(pem);
+```
+
+If you store the PEM in an environment variable, escaped newlines are common, which is why the example normalizes `\n` into real newlines before calling `ImportFromPem`.
+
 ## Example Behavior
 
 When the app runs, it:
 
-1. Prints the generated public key to the console
-2. Saves both keys into the `license_output` folder next to the executable
-3. Signs sample license data using the private key
-4. Verifies the signature using the public key
-5. Prints whether the signature is valid
+1. Prints the generated private key PEM to the console
+2. Prints the generated public key PEM to the console
+3. Shows the recommended runtime import pattern using `LICENCE_PRIVATE_KEY`
+4. Signs sample license data using the private key PEM
+5. Verifies the signature using the public key PEM
+6. Prints whether the signature is valid
 
 ## Security Note
 
-The private key is sensitive and should not be distributed with a client application.
+The private key is your signing authority.
 
-- Keep `license_private.key` secure
-- Distribute only the public key to applications that need to verify licenses
-- The app no longer prints the private key to stdout, but the file on disk still requires secure handling
+- Never commit it to Git
+- Never package it into publish output or container images
+- Never place it on client machines
+- Distribute only the public key to license-verifying applications

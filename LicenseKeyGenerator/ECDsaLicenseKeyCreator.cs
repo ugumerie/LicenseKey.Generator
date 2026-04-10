@@ -5,65 +5,48 @@ namespace LicenseKey.Generator.LicenseKeyGenerator;
 
 public class ECDsaLicenseKeyCreator
 {
-    public static void GenerateLicenseKeys()
+    private static bool s_useColor = true;
+
+    public static void GenerateLicenseKeys(bool useColor = true)
     {
+        s_useColor = useColor;
+
         using var ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        string privateKeyPem = ecdsa.ExportECPrivateKeyPem();
+        string publicKeyPem = ecdsa.ExportSubjectPublicKeyInfoPem();
 
-        // Private key (for signing)
-        byte[] privateKey = ecdsa.ExportECPrivateKey();
-        string privateKeyBase64 = Convert.ToBase64String(privateKey);
-
-        // Public key (for verification)
-        byte[] publicKey = ecdsa.ExportSubjectPublicKeyInfo();
-        string publicKeyBase64 = Convert.ToBase64String(publicKey);
-
-        Console.WriteLine("=== ECDSA Key Generation ===");
-        Console.WriteLine("Algorithm: ECDSA");
-        Console.WriteLine($"Curve: NIST P-256 (secp256r1)");
-        Console.WriteLine($"Key Size: 256 bits");
+        WriteSection("=== ECDSA Key Generation ===");
+        WriteLabelValue("Algorithm", "ECDSA");
+        WriteLabelValue("Curve", "NIST P-256 (secp256r1)");
+        WriteLabelValue("Key Size", "256 bits");
         Console.WriteLine();
 
-        Console.WriteLine("Private key generated and saved to the license_output folder.");
+        WriteWarning("Private Key PEM (copy to your secret manager; do not write this to disk):");
+        WriteBlock(privateKeyPem, ConsoleColor.Red);
+        Console.WriteLine();
 
-        Console.WriteLine("Public Key (Distribute with application - Used for verification):");
-        Console.WriteLine(publicKeyBase64);
+        WriteInfo("Public Key PEM (distribute with your application for verification):");
+        WriteBlock(publicKeyPem, ConsoleColor.Cyan);
         Console.WriteLine();
 
         // Get key parameters
         ECParameters parameters = ecdsa.ExportParameters(true);
 
-        Console.WriteLine("Key Parameters:");
-        Console.WriteLine($"- Curve: {parameters.Curve.Oid.FriendlyName}");
-        Console.WriteLine($"- Q.X (public key X coordinate): {Convert.ToBase64String(parameters.Q.X!)}");
-        Console.WriteLine($"- Q.Y (public key Y coordinate): {Convert.ToBase64String(parameters.Q.Y!)}");
-
-        // Save keys to files
-        SaveKeysToFile(privateKeyBase64, publicKeyBase64);
+        WriteSection("Key Parameters");
+        WriteBullet($"Curve: {parameters.Curve.Oid.FriendlyName}");
+        WriteBullet($"Q.X (public key X coordinate): {Convert.ToBase64String(parameters.Q.X!)}");
+        WriteBullet($"Q.Y (public key Y coordinate): {Convert.ToBase64String(parameters.Q.Y!)}");
+        Console.WriteLine();
+        WriteSection("Runtime Example");
+        WriteBlock("string pem = Environment.GetEnvironmentVariable(\"LICENCE_PRIVATE_KEY\")!.Replace(\\\"\\n\\\", \"\\n\");\nusing var signingKey = ECDsa.Create();\nsigningKey.ImportFromPem(pem);", ConsoleColor.DarkGray);
 
         // Demonstrate signing and verification
-        DemostrateSigningAndVerification(privateKeyBase64, publicKeyBase64);
+        DemonstrateSigningAndVerification(privateKeyPem, publicKeyPem);
     }
 
-    private static void SaveKeysToFile(string privateKeyBase64, string publicKeyBase64)
+    private static void DemonstrateSigningAndVerification(string privateKeyPem, string publicKeyPem)
     {
-        string outputDirectoryPath = Path.Combine(AppContext.BaseDirectory, "license_output");
-        if (!Directory.Exists(outputDirectoryPath))
-            Directory.CreateDirectory(outputDirectoryPath);
-
-        string privateKeyPath = Path.Combine(outputDirectoryPath, "license_private.key");
-        string publicKeyPath = Path.Combine(outputDirectoryPath, "license_public.key");
-
-        File.WriteAllText(privateKeyPath, privateKeyBase64);
-        Console.WriteLine($"Private key saved to: {privateKeyPath}");
-
-        File.WriteAllText(publicKeyPath, publicKeyBase64);
-        Console.WriteLine($"Public key saved to: {publicKeyPath}");
-        Console.WriteLine();
-    }
-
-    private static void DemostrateSigningAndVerification(string privateKeyBase64, string publicKeyBase64)
-    {
-        Console.WriteLine("=== Demonstrating Signing and Verification ===");
+        WriteSection("=== Demonstrating Signing and Verification ===");
         Console.WriteLine();
 
         // Sample license data to sign
@@ -71,25 +54,85 @@ public class ECDsaLicenseKeyCreator
         byte[] licenseDataBytes = Encoding.UTF8.GetBytes(licenseData);
 
         // Sign the license data
-        byte[] privateKeyBytes = Convert.FromBase64String(privateKeyBase64);
-
         using var ecdsaForSigning = ECDsa.Create();
-        ecdsaForSigning.ImportECPrivateKey(privateKeyBytes, out _);
+        ecdsaForSigning.ImportFromPem(privateKeyPem);
 
         // Create a signature for the license data
         byte[] signature = ecdsaForSigning.SignData(licenseDataBytes, HashAlgorithmName.SHA256);
         string signatureBase64 = Convert.ToBase64String(signature);
 
-        Console.WriteLine($"License Data: {licenseData}");
-        Console.WriteLine($"Signature (Base64): {signatureBase64}");
+        WriteLabelValue("License Data", licenseData);
+        WriteLabelValue("Signature (Base64)", signatureBase64);
 
         // Verify the signature using the public key
-        byte[] publicKeyBytes = Convert.FromBase64String(publicKeyBase64);
         using var ecdsaForVerification = ECDsa.Create();
-        ecdsaForVerification.ImportSubjectPublicKeyInfo(publicKeyBytes, out _);
+        ecdsaForVerification.ImportFromPem(publicKeyPem);
 
         bool isSignatureValid = ecdsaForVerification.VerifyData(licenseDataBytes, signature, HashAlgorithmName.SHA256);
 
-        Console.WriteLine($"Verification Result: {(isSignatureValid ? "VALID" : "INVALID")}");
+        WriteStatus($"Verification Result: {(isSignatureValid ? "VALID" : "INVALID")}", isSignatureValid);
+    }
+
+    private static void WriteSection(string message)
+    {
+        WriteColoredLine(message, ConsoleColor.Magenta);
+    }
+
+    private static void WriteInfo(string message)
+    {
+        WriteColoredLine(message, ConsoleColor.Blue);
+    }
+
+    private static void WriteWarning(string message)
+    {
+        WriteColoredLine(message, ConsoleColor.Yellow);
+    }
+
+    private static void WriteBullet(string message)
+    {
+        WriteColoredLine($"- {message}", ConsoleColor.Green);
+    }
+
+    private static void WriteLabelValue(string label, string value)
+    {
+        if (!s_useColor)
+        {
+            Console.WriteLine($"{label}: {value}");
+            return;
+        }
+
+        var originalForeground = Console.ForegroundColor;
+
+        Console.ForegroundColor = ConsoleColor.DarkYellow;
+        Console.Write($"{label}: ");
+
+        Console.ForegroundColor = ConsoleColor.White;
+        Console.WriteLine(value);
+
+        Console.ForegroundColor = originalForeground;
+    }
+
+    private static void WriteBlock(string content, ConsoleColor color)
+    {
+        WriteColoredLine(content, color);
+    }
+
+    private static void WriteStatus(string message, bool isSuccess)
+    {
+        WriteColoredLine(message, isSuccess ? ConsoleColor.Green : ConsoleColor.Red);
+    }
+
+    private static void WriteColoredLine(string message, ConsoleColor color)
+    {
+        if (!s_useColor)
+        {
+            Console.WriteLine(message);
+            return;
+        }
+
+        var originalForeground = Console.ForegroundColor;
+        Console.ForegroundColor = color;
+        Console.WriteLine(message);
+        Console.ForegroundColor = originalForeground;
     }
 }

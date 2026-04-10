@@ -1,9 +1,28 @@
 ﻿using LicenseKey.Generator.LicenseKeyGenerator;
 
-Console.WriteLine("=== License Key Generator Started ===");
+bool useColor = !Console.IsOutputRedirected
+	&& !args.Contains("--no-color", StringComparer.OrdinalIgnoreCase);
+
+WriteLineWithOptionalColor("=== License Key Generator Started ===", ConsoleColor.Magenta, useColor);
 Console.WriteLine();
 
-ECDsaLicenseKeyCreator.GenerateLicenseKeys();
+ECDsaLicenseKeyCreator.GenerateLicenseKeys(useColor);
 
 Console.WriteLine();
-Console.WriteLine("License key generation completed. Check the license_output folder for generated keys.");
+WriteLineWithOptionalColor(
+	"License key generation completed. Copy the private key PEM into your secret manager and distribute only the public key.",
+	ConsoleColor.Green,
+	useColor);
+
+static void WriteLineWithOptionalColor(string message, ConsoleColor color, bool useColor)
+{
+	if (!useColor)
+	{
+		Console.WriteLine(message);
+		return;
+	}
+
+	Console.ForegroundColor = color;
+	Console.WriteLine(message);
+	Console.ResetColor();
+}
