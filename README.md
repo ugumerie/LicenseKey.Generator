@@ -1,4 +1,4 @@
-# License Key Generator App
+# License Signing Key Generator App
 
 This project is a .NET console application that generates an ECDSA key pair for license signing and verification.
 
@@ -95,7 +95,7 @@ The published files will be under a path similar to:
 Run the published app from that folder:
 
 ```bash
-./LicenseKey.Generator
+./LicenseSigningKeyGenerator
 ```
 
 ### macOS self-contained publish
@@ -109,7 +109,7 @@ dotnet publish -c Release -r osx-arm64 --self-contained true -o ./publish
 Run it the same way:
 
 ```bash
-./LicenseKey.Generator
+./LicenseSigningKeyGenerator
 ```
 
 ## Publish And Run On Windows
@@ -131,7 +131,7 @@ The published files will be under a path similar to:
 Run the published executable:
 
 ```powershell
-.\LicenseKey.Generator.exe
+.\LicenseSigningKeyGenerator.exe
 ```
 
 If you need Windows on ARM instead, use:
@@ -151,7 +151,7 @@ dotnet publish -c Release -r win-x64 --self-contained true -o ./publish
 Run it with:
 
 ```powershell
-.\LicenseKey.Generator.exe
+.\LicenseSigningKeyGenerator.exe
 ```
 
 ## Publish And Run On Linux
@@ -179,7 +179,7 @@ The published files will be under a path similar to:
 Run the published app from that folder:
 
 ```bash
-./LicenseKey.Generator
+./LicenseSigningKeyGenerator
 ```
 
 ### Linux self-contained publish
@@ -193,7 +193,7 @@ dotnet publish -c Release -r linux-x64 --self-contained true -o ./publish
 Run it with:
 
 ```bash
-./LicenseKey.Generator
+./LicenseSigningKeyGenerator
 ```
 
 ## Runtime Usage

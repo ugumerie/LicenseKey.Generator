@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace LicenseKey.Generator.LicenseKeyGenerator;
+namespace LicenseSigningKeyGenerator.LicenseSigningKeyGenerator;
 
 public class ECDsaLicenseKeyCreator
 {

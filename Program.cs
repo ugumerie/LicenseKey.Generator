@@ -1,9 +1,9 @@
-﻿using LicenseKey.Generator.LicenseKeyGenerator;
+﻿using LicenseSigningKeyGenerator.LicenseSigningKeyGenerator;
 
 bool useColor = !Console.IsOutputRedirected
 	&& !args.Contains("--no-color", StringComparer.OrdinalIgnoreCase);
 
-WriteLineWithOptionalColor("=== License Key Generator Started ===", ConsoleColor.Magenta, useColor);
+WriteLineWithOptionalColor("=== License Signing Key Generator Started ===", ConsoleColor.Magenta, useColor);
 Console.WriteLine();
 
 ECDsaLicenseKeyCreator.GenerateLicenseKeys(useColor);
